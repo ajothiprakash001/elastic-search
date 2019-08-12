@@ -10,36 +10,34 @@ module.exports = function (app) {
   const options = {
     paginate
   };
+  const elasticSearch = app.service('esdoc');
 
   // Initialize our service with any options it requires
-  app.use('/listener', createService(options));
+//   app.use('/listener', createService(options));
 
   // Get our initialized service so that we can register hooks
-  const service = app.service('listener');
+//   const service = app.service('listener');
 
-  service.hooks(hooks);
-//   amqp.connect('amqp://localhost:5672', function(error0, connection) {
-//     if (error0) {
-//         throw error0;
-//     }
-//     connection.createChannel(function(error1, channel) {
-//         if (error1) {
-//             throw error1;
-//         }
+//   service.hooks(hooks);
+  amqp.connect('amqp://localhost:5672', function(error0, connection) {
+    if (error0) {
+        throw error0;
+    }
+    connection.createChannel(function(error1, channel) {
+        if (error1) {
+            throw error1;
+        }
 
-//         var queue = 'hello';
+        var queue = 'hello';
 
-//         // channel.assertQueue(queue, {
-//         //     durable: false
-//         // });
+        console.log(" [*] Waiting for messages inside %s. To exit press CTRL+C", queue);
 
-//         console.log(" [*] Waiting for messages inside %s. To exit press CTRL+C", queue);
-
-//         channel.consume(queue, function(msg) {
-//             console.log(" [x] Received %s", msg.content.toString());
-//         }, {
-//             noAck: true
-//         });
-//     });
-// });
+        channel.consume(queue, function(msg) {
+            console.log(" [x] Received %s", msg.content);
+            elasticSearch.receivedData(msg.content);
+        }, {
+            noAck: true
+        });
+    });
+});
 };

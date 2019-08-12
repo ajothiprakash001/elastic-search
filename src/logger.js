@@ -9,7 +9,7 @@ const logger = createLogger({
     format.simple()
   ),
   transports: [
-    new transports.Console()
+    new transports.File({ filename: 'testing.log', level: 'error' })
   ],
 });
 
