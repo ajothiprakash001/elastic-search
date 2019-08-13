@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 const request_module = require('request-promise');
+const logger = require('../../logger.js');
 
 /**
  * Construct ELS specific payload for group by search.
@@ -47,9 +48,10 @@ function searchData(url, inputData) {
       body : inputData
     }, function(err, res, body) {
       if (!err && res.statusCode == 200) {
-        console.log("Documents retrieved successfully");
+        logger.info("Documents retrieved successfully");
         resolve(body);
       } else {
+        logger.error("Document retrieve failed::: " + body.error.reason );
         reject({ "status": "error", "message": "Document retrieve failed. " + body.error.reason });
       }
     });
@@ -94,12 +96,11 @@ function createOrUpdateDoc(data, ip) {
       json: data.document
     }, function(err, res, body) {
       if (!err && (res.statusCode == 200 || res.statusCode == 201)) {
-        console.log("Document "+body.result+" successfully ::: ", body);
+        logger.info("Document "+ body.result +" successfully ::: ", body);
         resolve({ "status": "success" });
       } else {
         if (err) {
-          console.log("error: ", err);
-          console.log("status code: ", res.statusCode);
+          logger.error("error: ", err);
           reject({ "status": "error", "message": "Document creation failed. " + err });
         }
       }
@@ -115,11 +116,11 @@ function createOrUpdateDoc(data, ip) {
 function deleteDoc(data, ip) {
   const url = ip + data.index + '/_doc/' + data.id +'?routing='+ data.tenant_id+'&pretty';
   return new Promise(function (resolve, reject) {
+    logger.info("Deleted request for :", body);
     request_module.delete(url, function(err, res, body) {
-      console.log(":::::::::",body);
       body = JSON.parse(body);
       if(body.result == 'deleted'){
-        console.log("Document deleted successfully ::: ");
+        logger.info("Document deleted successfully ::: ");
         resolve({ "status": "success" });
       } else if(body.result == 'not_found'){
         console.log("Id not found ", data.id);

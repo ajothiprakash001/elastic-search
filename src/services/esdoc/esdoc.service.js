@@ -6,7 +6,6 @@ const logger = require('../../logger.js');
 module.exports = function (app) {
   const elasticIP = app.get('elastic-ip');
   const paginate = app.get('paginate');
-  // const logger = app.get('logger');
 
   const options = {
     paginate,

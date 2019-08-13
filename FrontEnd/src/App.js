@@ -6,21 +6,22 @@ class App extends React.Component {
 
   constructor(props) {
     super(props);
-    this.state = { searchString : '', countryCode : 'au' , tableData : {} };
+    this.state = { 
+      refreshTable: false,
+      searchString : '', countryCode : 'au' , tableData : {} };
     this.onInputChange = this.onInputChange.bind(this);
-    this.search = this.search.bind(this);
   }
 
-  search() {
+  search = () => {
       if (this.state.searchString !== '') {
         let opts = {
           "indexName" : "social_profile_idx",
           "countryCode" : this.state.countryCode,
           "searchStr" : this.state.searchString,
-          "groupBy" : "social_name.keyword",
+          "groupBy" : "social_name",
           "groupSize" : 5
           };
-        fetch('http://192.168.1.197:3030/elastic-search/search-data', {
+        fetch('http://localhost:3030/elastic-search/search-data', {
         method: 'post',
         body: JSON.stringify(opts)
         })
@@ -29,9 +30,15 @@ class App extends React.Component {
           if (searchResponse && 0 === searchResponse.total) {
             this.setState({showTable : false}); 
           } else {
-            this.setState({showTable : true}); 
-            this.setState({tableData: searchResponse.data });
+            this.setState((state, props) => ({
+              tableData: {
+                ...searchResponse.data
+              },
+              refreshTable: !state.refreshTable,
+              showTable: true
+            }));
           }
+          this.forceUpdate();
         })
         .catch(console.log)
       } else {
@@ -48,9 +55,7 @@ class App extends React.Component {
   }
 
   render () {
-    let data = this.state.tableData;
-    let tables = [];
-    Object.keys(data).forEach(function(key, index) { tables[index] = <Table tableName={key} records={data[key]} /> })
+    const { tableData, refreshTable, showTable } = this.state;
     return (
       <div>
         <div className="header">
@@ -74,7 +79,12 @@ class App extends React.Component {
           </div>
         </div>
         <div className="content">
-          {this.state.showTable && tables.map(table => table)}
+          {
+            showTable &&
+            Object.keys(tableData).map((item) => (
+              <Table key={item} refreshTable={refreshTable} tableName={item} records={tableData[item]}/>
+            ))
+          }
           {this.state.showTable === false && <div className="error"> No Record Found </div>}
         </div>
       </div>

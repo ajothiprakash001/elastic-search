@@ -3,10 +3,13 @@ import React from 'react';
 class Table extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {tableName: props.tableName, records: props.records};
+    this.state = {
+      refreshTable: false,
+      tableName: props.tableName, records: props.records};
   }
-  render () {
 
+  render () {
+    console.log('====================', this.state.refreshTable);
     return (
       <div>
         <h3 className="type">{this.state.tableName.toUpperCase()} <span className="count">({this.state.records.length})</span></h3>
