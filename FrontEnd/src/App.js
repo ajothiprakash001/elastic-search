@@ -8,28 +8,32 @@ class App extends React.Component {
     super(props);
     this.state = { 
       refreshTable: false,
+      // totalResults [],
       searchString : '', countryCode : 'au' , tableData : {} };
     this.onInputChange = this.onInputChange.bind(this);
   }
 
   search = () => {
       if (this.state.searchString !== '') {
+        this.setState({
+          tableData: {}
+        });
         let opts = {
-          "indexName" : "social_profile_idx",
+          "indexName" : "prod_social_idx",
           "countryCode" : this.state.countryCode,
           "searchStr" : this.state.searchString,
-          "groupBy" : "social_name",
+          "groupBy" : "social_name.keyword",
           "groupSize" : 5
           };
-        fetch('http://localhost:3030/elastic-search/search-data', {
+        fetch('http://172.31.98.145:3030/elastic-search/search-data', {
         method: 'post',
         body: JSON.stringify(opts)
         })
         .then(res => res.json())
         .then((searchResponse) => {
-          if (searchResponse && 0 === searchResponse.total) {
-            this.setState({showTable : false}); 
-          } else {
+          debugger;
+          if (searchResponse && 0 < searchResponse.total) {
+            this.setState({totalResults : searchResponse.total});
             this.setState((state, props) => ({
               tableData: {
                 ...searchResponse.data
@@ -37,6 +41,8 @@ class App extends React.Component {
               refreshTable: !state.refreshTable,
               showTable: true
             }));
+          } else {
+            this.setState({showTable : false}); 
           }
           this.forceUpdate();
         })
@@ -55,7 +61,8 @@ class App extends React.Component {
   }
 
   render () {
-    const { tableData, refreshTable, showTable } = this.state;
+    const { tableData, refreshTable, showTable, totalResults } = this.state;
+    console.log('render', this.state);
     return (
       <div>
         <div className="header">
@@ -80,9 +87,12 @@ class App extends React.Component {
         </div>
         <div className="content">
           {
+            showTable && <h3 className="type"> Total Results : {totalResults} </h3>
+          }
+          {
             showTable &&
-            Object.keys(tableData).map((item) => (
-              <Table key={item} refreshTable={refreshTable} tableName={item} records={tableData[item]}/>
+            Object.keys(tableData).map((item, index) => (
+              <Table key={index} refreshTable={refreshTable} tableName={item} records={tableData[item]}/>
             ))
           }
           {this.state.showTable === false && <div className="error"> No Record Found </div>}
