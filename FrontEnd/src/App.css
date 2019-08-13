@@ -1,0 +1,87 @@
+.header {
+  background: #232f3e;
+}
+
+.search {
+  height: 50px;
+  flex-direction: row;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.searchBar {
+  margin: 30px;
+}
+
+.title {
+  color: #ffffff;
+  text-align: center;
+  margin: 0px;
+  padding: 15px;
+}
+
+.type {
+  margin:0px;
+  padding:15px;
+}
+
+.count {
+  color:red;
+}
+
+.h-25 {
+  height: 25px;
+}
+
+.searchBox {
+  border-radius:3px;
+}
+
+.content {
+  height: 100vh;
+  background-color: #e5f0f1;
+}
+
+table, th, td {
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+
+table{
+  width: 100%
+}
+
+td, tr{
+  text-align: center;
+}
+
+.App-logo {
+  animation: App-logo-spin infinite 20s linear;
+  height: 40vmin;
+  pointer-events: none;
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
