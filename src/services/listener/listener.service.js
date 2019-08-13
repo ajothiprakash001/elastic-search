@@ -34,7 +34,7 @@ module.exports = function (app) {
 
         channel.consume(queue, function(msg) {
             console.log(" [x] Received %s", msg.content);
-            elasticSearch.receivedData(msg.content);
+            elasticSearch.processData(msg.content);
         }, {
             noAck: true
         });

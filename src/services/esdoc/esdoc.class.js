@@ -1,82 +1,132 @@
 /* eslint-disable no-unused-vars */
 const request_module = require('request-promise');
 
-// function getData (url) {
-//   console.log(url);
-//   var options = {
-//     url: url,
-//     json: true,
-//     method: 'POST'
-//   }
-//   return new Promise(function (resolve, reject) {
-//     request.get(options, function(err, res, body) {
-//       if (err) {
-//         reject(err);
-//       } else {
-//         resolve(body);
-//       }
-//     });
-//   });
-// }
-
-// function createEntity (url) {
-//   console.log(url);
-//   var options = {
-//     url: url,
-//     json: true,
-//     method: 'POST',
-//     body: {
-      
-//     }
-//   }
-//   return new Promise(function (resolve, reject) {
-//     request.post(options, function(err, res, body) {
-//       if (err) {
-//         reject(err);
-//       } else {
-//         resolve(body);
-//       }
-//     });
-//   });
-// }
-
-function createOrUpdateDoc(data, ip) {
-  var req_body = data.document;
-// console.log('req body: ', req_body);
-
-  const url = ip + data.index + '/_doc/' + data.id ;
-  const qs = {
-    routing: data.tenant_id,
-    refresh: true
-  }
-  const options = {
-    url: url,
-    qs: qs,
-    json: true,
-    header: {
-      'Content-Type': 'application/json'
+/**
+ * Construct ELS specific payload for group by search.
+ * @param {*} data 
+ */
+function constructGroupBySearchBody(data) {
+  return {
+    "query": {
+      "multi_match": {
+        "query": data.searchStr,
+        "fields": [
+          "skills",
+          "tags"
+        ]
+      }
     },
-    body: req_body
-  };
-  console.log("document create options " + options);
-  return new Promise(function (resolve, reject) {
-    request_module.put(options, function (err, res, body) {
-      if (!err && res.statusCode < 299) {
-        if (body.acknowledged == true) {
-          console.log("Document created successfully");
-          resolve({ "status": "success" });
-        } else {
-          console.log("status code: ", res.statusCode);
-          console.log("Document creation failed");
-          reject({ "status": "error", "message": "Document creation failed. " + res.status });
+    "size": 0,
+    "aggs": {
+      "group_by": {
+        "terms": {
+          "field": data.groupBy
+        },
+        "aggs": {
+          "group_by_hits": {
+            "top_hits": {
+              "size": data.groupSize
+            }
+          }
         }
+      }
+    }
+  };
+}
+
+/**
+ * Search data in ELS.
+ * @param {*} url 
+ * @param {*} inputData 
+ */
+function searchData(url, inputData) {
+  return new Promise(function(resolve,reject){
+    request_module.post({
+      url: url, 
+      json: true,
+      body : inputData
+    }, function(err, res, body) {
+      if (!err && res.statusCode == 200) {
+        console.log("Documents retrieved successfully");
+        resolve(body);
+      } else {
+        reject({ "status": "error", "message": "Document retrieve failed. " + body.error.reason });
+      }
+    });
+  });
+}
+
+/**
+ * Generate system specific response from ELS response.
+ * @param {*} data 
+ */
+function generateResponse(data) {
+  var socialNameMap = {};
+  var response = {};
+  response.total = 0;
+  response.data = {};
+  if (data.hits.total.value > 0) {
+    response.total = data.hits.total.value;
+    (data.aggregations.group_by.buckets).forEach(function(data) {
+      var socialName = data.key;
+      var socialNameData = [];
+      (data.group_by_hits.hits.hits).forEach(function(data) {
+        socialNameData.push(data._source);
+      });
+      socialNameMap[socialName] = socialNameData;
+    });
+    response.data = socialNameMap;
+  }
+  return response;
+}
+
+/**
+ * Create or update document.
+ * @param {*} data 
+ * @param {*} ip 
+ */
+function createOrUpdateDoc(data, ip) {
+  var url = ip + data.index + '/_doc/'
+              + data.id + '?routing=' + data.tenant_id + '&refresh=true&pretty';
+  return new Promise(function (resolve, reject) {
+    request_module.post({
+      url: url, 
+      json: data.document
+    }, function(err, res, body) {
+      if (!err && (res.statusCode == 200 || res.statusCode == 201)) {
+        console.log("Document "+body.result+" successfully ::: ", body);
+        resolve({ "status": "success" });
       } else {
         if (err) {
           console.log("error: ", err);
+          console.log("status code: ", res.statusCode);
           reject({ "status": "error", "message": "Document creation failed. " + err });
         }
-        console.log("status code: ", res.statusCode);
-        reject({ "status": "error", "message": "Document creation failed. " + res.status });
+      }
+    });
+  });
+}
+
+/**
+ * Delete a document by id.
+ * @param {*} data 
+ * @param {*} ip 
+ */
+function deleteDoc(data, ip) {
+  const url = ip + data.index + '/_doc/' + data.id +'?routing='+ data.tenant_id+'&pretty';
+  return new Promise(function (resolve, reject) {
+    request_module.delete(url, function(err, res, body) {
+      console.log(":::::::::",body);
+      body = JSON.parse(body);
+      if(body.result == 'deleted'){
+        console.log("Document deleted successfully ::: ");
+        resolve({ "status": "success" });
+      } else if(body.result == 'not_found'){
+        console.log("Id not found ", data.id);
+        resolve({ "status": "failure" });
+      } else {
+        console.log("Error while delete");
+        reject({ "status": "failure" });
       }
     });
   });
@@ -121,66 +171,30 @@ class Service {
       res.send(data);
   }
 
-  getSearchData(data, api) {
-    console.log('Enter inside method' + data, api);
-    var url = api;
-    url += data.index + '/';
-    url += '_search?q=';
-    url += data.field;
-    url += ':*';
-    url += data.searchString;
-    url += '*';
-    // var promise = getData(url);
-    return getData(url);
+  async  getSearchData(data) {
+    if (typeof data == "string") {
+      data = JSON.parse(data);
+    }
+    var url = this.options.elasticIP + 'profile_' + data.countryCode.toUpperCase() + '/_search?&pretty';
+    return generateResponse(await searchData(url, constructGroupBySearchBody(data)));
   }
 
-  receivedData(data) {
-    const entity = JSON.parse(data);
+  processData(data) {
+    var entity = JSON.parse(data);
     if (entity.action === 'add') {
-      console.log("Entering addition " + data);
-      createOrUpdateDoc(data, this.options.elasticIP).then(function (data) {
-        console.log("Document Successfully created");
-      }, function (err) {
-        console.log("Error creating document");
+      createOrUpdateDoc(entity, this.options.elasticIP).then(function (data) {
+        console.log("Document Created/Updated Successfully ::: ", data);
+      }, function(err) {
+        console.log("Error creating document ::: ", err);
       });
     } else if (entity.action === 'remove') {
-      removeDoc(data);
-    }
-  }
-
-  
-
-  removeDoc(data) {
-    const url = this.options.elasticIP + data.index + '/_doc/' + id;
-  
-    const options = {
-      url: url,
-    };
-  
-    return new Promise(function (resolve, reject) {
-      request_module.delete(options, function(err, res, body) {
-        if (!err && res.statusCode < 299) {
-          body = JSON.parse(body);
-          console.log("Deleted response body" + body);
-          if (body.acknowledged === true) {
-            console.log("Document deleted successfully");
-            resolve({ "status": "success" });
-          } else {
-            console.log("status code: ", res.statusCode);
-            console.log("Document deletion failed");
-            reject({ "status": "error", "message": "Document deletion failed. " + res.status });
-          }
-        } else {
-          if (err) {
-            console.log("error: ", err);
-            reject({ "status": "error", "message": "Document deletion failed. " + err });
-          }
-          console.log("status code: ", res.statusCode);
-          reject({ "status": "error", "message": "Document deletion failed. " + res.status });
-        }
+      deleteDoc(entity, this.options.elasticIP).then(function (data) {
+        console.log("Document deleted Successfully ::: ", data);
+      }, function(err) {
+        console.log("Error delete document ::: ", err);
       });
-    });
-  }
+    }
+  } 
 }
 
 module.exports = function (options) {
