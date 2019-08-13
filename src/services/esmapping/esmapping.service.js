@@ -5,9 +5,11 @@ const hooks = require('./esmapping.hooks');
 module.exports = function (app) {
   
   const paginate = app.get('paginate');
+  const elasticIP = app.get('elastic-ip'); 
 
   const options = {
-    paginate
+    paginate,
+    elasticIP
   };
 
   // Initialize our service with any options it requires

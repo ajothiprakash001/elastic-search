@@ -13,22 +13,22 @@ module.exports = function (app) {
   };
   const elasticSearch = app.service('esdoc');
 
-  // amqp.connect('amqp://localhost:5672', function (error0, connection) {
-  //   if (error0) {
-  //     throw error0;
-  //   }
-  //   connection.createChannel(function (error1, channel) {
-  //     if (error1) {
-  //       throw error1;
-  //     }
-  //     console.log(" [*] Waiting for messages inside %s. To exit press CTRL+C", queueName);
+  amqp.connect('amqp://localhost:5672', function (error0, connection) {
+    if (error0) {
+      throw error0;
+    }
+    connection.createChannel(function (error1, channel) {
+      if (error1) {
+        throw error1;
+      }
+      console.log(" [*] Waiting for messages inside %s. To exit press CTRL+C", queueName);
 
-  //     channel.consume(queueName, function (msg) {
-  //       console.log(" [x] Received %s", msg.content);
-  //       elasticSearch.processData(msg.content);
-  //     }, {
-  //         noAck: true
-  //       });
-  //   });
-  // });
+      channel.consume(queueName, function (msg) {
+        console.log(" [x] Received %s", msg.content);
+        elasticSearch.processData(msg.content);
+      }, {
+          noAck: true
+        });
+    });
+  });
 };

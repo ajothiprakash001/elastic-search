@@ -9,12 +9,8 @@ const logger = require('../../logger.js');
 function constructGroupBySearchBody(data) {
   return {
     "query": {
-      "multi_match": {
-        "query": data.searchStr,
-        "fields": [
-          "skills",
-          "tags"
-        ]
+      "match": {
+        "search_field": data.searchStr
       }
     },
     "size": 0,
@@ -116,7 +112,6 @@ function createOrUpdateDoc(data, ip) {
 function deleteDoc(data, ip) {
   const url = ip + data.index + '/_doc/' + data.id +'?routing='+ data.tenant_id+'&pretty';
   return new Promise(function (resolve, reject) {
-    logger.info("Deleted request for :", body);
     request_module.delete(url, function(err, res, body) {
       body = JSON.parse(body);
       if(body.result == 'deleted'){
@@ -176,7 +171,8 @@ class Service {
     if (typeof data == "string") {
       data = JSON.parse(data);
     }
-    var url = this.options.elasticIP + 'profile_' + data.countryCode.toUpperCase() + '/_search?&pretty';
+    var searchType = data.countryCode ? data.indexName + '_' + data.countryCode.toUpperCase() : data.indexName;
+    var url = this.options.elasticIP + searchType + '/_search?&pretty';
     return generateResponse(await searchData(url, constructGroupBySearchBody(data)));
   }
 
