@@ -23,7 +23,7 @@
 
 .type {
   margin:0px;
-  padding:15px;
+  padding:15px 0px 2px 5px;
 }
 
 .count {
@@ -41,6 +41,13 @@
 .content {
   height: 100vh;
   background-color: #e5f0f1;
+}
+
+.error {
+  text-align: center;
+  padding-top: 10%;
+  font-weight: 500;
+  font-size: x-large;
 }
 
 table, th, td {

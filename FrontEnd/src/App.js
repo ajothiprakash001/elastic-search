@@ -6,20 +6,37 @@ class App extends React.Component {
 
   constructor(props) {
     super(props);
-    this.state = { searchString : '' , countryCode : 'AUS', 
-    showTable : false,
-     tables : [] };
+    this.state = { searchString : '', countryCode : 'au' , tableData : {} };
     this.onInputChange = this.onInputChange.bind(this);
     this.search = this.search.bind(this);
   }
 
   search() {
-     if (this.state.searchString !== '') {
-      this.setState({tables: [{ "typeName": "Github", "records": [ { "country_code": "DE", "social_name": "github", "username": "karussell", "name": "Peter", "tags": "java, objective-c, css, ruby, c#, python", "url": "https://github.com/karussell", "country": "Germany", "links": "https://karussell.wordpress.com/about" }, { "country_code": "DE", "social_name": "github", "username": "Perborgen", "name": "Hein", "tags": "java, javascript, css, ruby, perl", "url": "https://github.com/Perborgen", "country": "Germany", "links": "https://Perborgen.wordpress.com/about" }] }, { "typeName": "LinkedIn", "records": [ { "country_code": "DE", "social_name": "linkedin", "name": "karussell", "last_name": "Peter", "skills": "java, objective-c, css, ruby, c#, python", "url": "https://linkedin.com/karussell", "country": "Germany" }, { "country_code": "DE", "social_name": "linkedin", "username": "Perborgen", "name": "Hein", "skills": "java, javascript, css, ruby, perl", "url": "https://linkedin.com/Perborgen", "country": "Germany" }] }]});
-      this.setState({showTable : true}); 
-     } else {
+      if (this.state.searchString !== '') {
+        let opts = {
+          "indexName" : "social_profile_idx",
+          "countryCode" : this.state.countryCode,
+          "searchStr" : this.state.searchString,
+          "groupBy" : "social_name.keyword",
+          "groupSize" : 5
+          };
+        fetch('http://192.168.1.197:3030/elastic-search/search-data', {
+        method: 'post',
+        body: JSON.stringify(opts)
+        })
+        .then(res => res.json())
+        .then((searchResponse) => {
+          if (searchResponse && 0 === searchResponse.total) {
+            this.setState({showTable : false}); 
+          } else {
+            this.setState({showTable : true}); 
+            this.setState({tableData: searchResponse.data });
+          }
+        })
+        .catch(console.log)
+      } else {
        alert("Please Enter a text to search");
-     }
+      }
   }
 
   onInputChange(event) {
@@ -31,6 +48,9 @@ class App extends React.Component {
   }
 
   render () {
+    let data = this.state.tableData;
+    let tables = [];
+    Object.keys(data).forEach(function(key, index) { tables[index] = <Table tableName={key} records={data[key]} /> })
     return (
       <div>
         <div className="header">
@@ -38,11 +58,11 @@ class App extends React.Component {
           <div className="search">
             <span>
               <select value={this.state.countryCode} onChange={this.onInputChange} name="countryCode" className="h-25">
-                <option value="AUS">Australia</option>
-                <option value="IN">India</option>
-                <option value="NZ">New Zealand</option>
-                <option value="US">United States of America</option>
-                <option value="UK">United Kingdom</option>
+                <option value="au">Australia</option>
+                <option value="de">Denmark</option>
+                <option value="in">India</option>
+                <option value="nz">New Zealand</option>
+                <option value="us">United States of America</option>
               </select>
             </span>
             <span className="searchBar">
@@ -54,7 +74,8 @@ class App extends React.Component {
           </div>
         </div>
         <div className="content">
-          {this.state.showTable && this.state.tables.map( tableData => <Table content={tableData} /> )}
+          {this.state.showTable && tables.map(table => table)}
+          {this.state.showTable === false && <div className="error"> No Record Found </div>}
         </div>
       </div>
     );  
